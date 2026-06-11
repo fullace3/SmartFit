@@ -1,0 +1,50 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+
+# --- Sistema Operativo y Basura Local ---
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.tmp
+*.temp
+
+# --- Android Studio Extra ---
+.navigation/
+captures/
+.externalNativeBuild/
+.cxx/
+*.iml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+# Es mejor ignorar TODA la carpeta .idea si trabajas solo
+.idea/
+
+# --- Local DB & Secrets ---
+*.db
+*.db-journal
+*.sqlite
+secrets.xml
+*.properties
+!gradle.properties # Este sí debe subirse si no tiene contraseñas
+
+# --- Logs y Performance ---
+*.hprof
+/captures/
+
+# --- LaTeX adicional ---
+*.pyg
+_minted-*/
