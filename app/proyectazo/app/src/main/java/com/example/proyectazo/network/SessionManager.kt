@@ -3,43 +3,32 @@ package com.example.proyectazo.network
 import android.content.Context
 
 /**
-* Manages the user session by persisting the JWT token and basic user data
- * * in SharedPreferences. Acts as the single source of truth for authentication state.
+ * Manages the local user session via SharedPreferences.
+ * Without a backend there is no JWT token — the session is just
+ * the userId and display name persisted after a successful local login.
  *
- * Stored in "smartfit_session" — separate from "smartfit_config" so that
- * closing the session does not erase the user's app preferences.
-*/
+ * The key names are kept identical to the original so no other file
+ * needs to change how it reads session data.
+ */
 class SessionManager(context: Context) {
 
-    // MODE_PRIVATE ensures this file is only accessible by this app
     private val prefs = context.getSharedPreferences("smartfit_session", Context.MODE_PRIVATE)
 
-    /**
-     * Persists the JWT token and user identity after a successful login.
-     * Called once on login — all subsequent API calls read from here.
-     */
-    fun guardarSesion(token: String, userId: Int, nombre: String) {
+    /** Called after a successful login() or registrar() from the Repository. */
+    fun guardarSesion(userId: Int, nombre: String) {
         prefs.edit()
-            .putString("token", token)
             .putInt("user_id", userId)
             .putString("user_nombre", nombre)
-            .apply() // apply() is asynchronous — use commit() only if the result needs to be confirmed immediately
+            .putBoolean("logged_in", true)
+            .apply()
     }
 
     fun getUserNombre(): String = prefs.getString("user_nombre", "Usuario") ?: "Usuario"
 
-    // Returns null if no session exists — used by isLoggedIn() to check auth state
-    fun getToken(): String? = prefs.getString("token", null)
+    fun getUserId(): Int = prefs.getInt("user_id", -1)
 
-    fun getUserId(): Int = prefs.getInt("user_id", -1)   // -1 indicates no active session
+    fun isLoggedIn(): Boolean = prefs.getBoolean("logged_in", false)
 
-    // Used by the NavGraph to decide whether to show Login or Home on app launch
-    fun isLoggedIn(): Boolean = getToken() != null
-
-    /**
-     * Clears all session data on logout.
-     * Does NOT affect "smartfit_config" where workout time and setup preferences are stored.
-     */
     fun cerrarSesion() {
         prefs.edit().clear().apply()
     }
