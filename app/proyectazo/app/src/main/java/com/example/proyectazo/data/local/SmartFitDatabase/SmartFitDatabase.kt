@@ -1,4 +1,4 @@
-package com.example.proyectazo.data.local.SmartFitDatabase
+package com.example.proyectazo.data.local
 
 import android.content.Context
 import androidx.room.Database
@@ -39,121 +39,200 @@ abstract class SmartFitDatabase : RoomDatabase() {
     abstract fun medidaDao(): MedidaDao
 
     companion object {
-        @Volatile private var INSTANCE: SmartFitDatabase? = null
+        @Volatile
+        private var INSTANCE: SmartFitDatabase? = null
 
-        fun getInstance(context: Context): SmartFitDatabase =
-            INSTANCE ?: synchronized(this) {
-                INSTANCE ?: Room.databaseBuilder(
+        fun getInstance(context: Context): SmartFitDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
                     context.applicationContext,
                     SmartFitDatabase::class.java,
                     "smartfit.db"
                 )
-                    .addCallback(SeedCallback)
+                    .addCallback(SeedCallback(context))
                     .build()
-                    .also { INSTANCE = it }
+                INSTANCE = instance
+                instance
             }
+        }
     }
 
-    private object SeedCallback : Callback() {
+    // Inserts seed data on first install — exercises and global food items
+    private class SeedCallback(private val context: Context) : RoomDatabase.Callback() {
         override fun onCreate(db: SupportSQLiteDatabase) {
             super.onCreate(db)
-            INSTANCE?.let { database ->
-                CoroutineScope(Dispatchers.IO).launch {
-                    database.ejercicioDao().insertarTodos(seedEjercicios())
-                    database.comidaDao().insertarTodas(seedComidas())
-                }
+            CoroutineScope(Dispatchers.IO).launch {
+                val database = getInstance(context)
+                database.ejercicioDao().insertarTodos(seedEjercicios())
+                database.comidaDao().insertarTodas(seedComidas())
             }
         }
     }
 }
 
-// ── SEED DATA ─────────────────────────────────────────────────────────────────
-
+// ── SEED EJERCICIOS ───────────────────────────────────────────────────────
+// Catálogo real de 100 ejercicios (origen: EjerciciosCompleto.csv del proyecto
+// original). El campo 'imagen' guarda solo el nombre del recurso local en
+// res/drawable, SIN extensión ni ruta — son imágenes propias, ya no URLs de S3.
+// Se resuelven a R.drawable.<nombre> en tiempo de ejecución vía
+// ImagenesLocales.resolver() (ui/util/ImagenesLocales.kt).
 private fun seedEjercicios(): List<EjercicioEntity> = listOf(
     // Pecho
-    EjercicioEntity(nombre = "Press de banca",          grupo_muscular = "Pecho",     equipamiento = "Barra",      descripcion = "Tumbado en banco, baja la barra al pecho y empuja hacia arriba.", imagen = "https://smartfit-exercises.s3.amazonaws.com/press_banca.jpg"),
-    EjercicioEntity(nombre = "Press inclinado",         grupo_muscular = "Pecho",     equipamiento = "Barra",      descripcion = "Press en banco inclinado para la parte superior del pecho.", imagen = "https://smartfit-exercises.s3.amazonaws.com/press_inclinado.jpg"),
-    EjercicioEntity(nombre = "Aperturas con mancuernas",grupo_muscular = "Pecho",     equipamiento = "Mancuernas", descripcion = "Tumbado, abre los brazos en arco hasta sentir el pecho estirado.", imagen = "https://smartfit-exercises.s3.amazonaws.com/aperturas.jpg"),
-    EjercicioEntity(nombre = "Fondos en paralelas",     grupo_muscular = "Pecho",     equipamiento = "Peso corporal", descripcion = "Baja el cuerpo entre las paralelas y empuja hacia arriba.", imagen = "https://smartfit-exercises.s3.amazonaws.com/fondos.jpg"),
-    EjercicioEntity(nombre = "Flexiones",               grupo_muscular = "Pecho",     equipamiento = "Peso corporal", descripcion = "Posición de plancha, baja el pecho al suelo y sube.", imagen = "https://smartfit-exercises.s3.amazonaws.com/flexiones.jpg"),
+    EjercicioEntity(nombre = "Paralela Flexión", grupo_muscular = "Pecho", equipamiento = "Barras paralelas", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "paralela_flexion"),
+    EjercicioEntity(nombre = "Barra Press de banca", grupo_muscular = "Pecho", equipamiento = "Barra", descripcion = "Túmbate en el banco, baja el peso de forma controlada hasta el pecho y empuja con fuerza hasta extender los brazos.", imagen = "press_banca_barra"),
+    EjercicioEntity(nombre = "Barra Press de banca inclinado", grupo_muscular = "Pecho", equipamiento = "Barra", descripcion = "Túmbate en el banco, baja el peso de forma controlada hasta el pecho y empuja con fuerza hasta extender los brazos.", imagen = "press_banca_inclinado"),
+    EjercicioEntity(nombre = "Barra Press de banca declinado", grupo_muscular = "Pecho", equipamiento = "Barra", descripcion = "Túmbate en el banco, baja el peso de forma controlada hasta el pecho y empuja con fuerza hasta extender los brazos.", imagen = "press_banca_declinado"),
+    EjercicioEntity(nombre = "Peso corporal Flexión", grupo_muscular = "Pecho", equipamiento = "Peso corporal", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "peso_corporal_flexion"),
+    EjercicioEntity(nombre = "Barra Floor Press", grupo_muscular = "Pecho", equipamiento = "Barra", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "barra_floor_press"),
+    EjercicioEntity(nombre = "Doble Mancuerna Press de banca", grupo_muscular = "Pecho", equipamiento = "Mancuerna", descripcion = "Túmbate en el banco, baja el peso de forma controlada hasta el pecho y empuja con fuerza hasta extender los brazos.", imagen = "doble_mancuerna_press_banca"),
+    EjercicioEntity(nombre = "Doble Mancuerna Press de banca inclinado", grupo_muscular = "Pecho", equipamiento = "Mancuerna", descripcion = "Túmbate en el banco, baja el peso de forma controlada hasta el pecho y empuja con fuerza hasta extender los brazos.", imagen = "doble_mancuerna_press_inclinado"),
+    EjercicioEntity(nombre = "Doble Mancuerna Press de banca declinado", grupo_muscular = "Pecho", equipamiento = "Mancuerna", descripcion = "Túmbate en el banco, baja el peso de forma controlada hasta el pecho y empuja con fuerza hasta extender los brazos.", imagen = "doble_mancuerna_press_banca_declinado"),
     // Espalda
-    EjercicioEntity(nombre = "Dominadas",               grupo_muscular = "Espalda",   equipamiento = "Peso corporal", descripcion = "Agarra la barra y sube hasta que el mentón supere la barra.", imagen = "https://smartfit-exercises.s3.amazonaws.com/dominadas.jpg"),
-    EjercicioEntity(nombre = "Remo con barra",          grupo_muscular = "Espalda",   equipamiento = "Barra",      descripcion = "Inclinado hacia adelante, tira la barra hacia el abdomen.", imagen = "https://smartfit-exercises.s3.amazonaws.com/remo_barra.jpg"),
-    EjercicioEntity(nombre = "Jalón al pecho",          grupo_muscular = "Espalda",   equipamiento = "Máquina",    descripcion = "Sentado en polea, tira la barra hacia el pecho.", imagen = "https://smartfit-exercises.s3.amazonaws.com/jalon_pecho.jpg"),
-    EjercicioEntity(nombre = "Remo con mancuerna",      grupo_muscular = "Espalda",   equipamiento = "Mancuernas", descripcion = "Apoyado en banco, tira la mancuerna hacia la cadera.", imagen = "https://smartfit-exercises.s3.amazonaws.com/remo_mancuerna.jpg"),
-    EjercicioEntity(nombre = "Peso muerto",             grupo_muscular = "Espalda",   equipamiento = "Barra",      descripcion = "Levanta la barra del suelo manteniendo la espalda recta.", imagen = "https://smartfit-exercises.s3.amazonaws.com/peso_muerto.jpg"),
+    EjercicioEntity(nombre = "Polea Straight Bar Pullover", grupo_muscular = "Espalda", equipamiento = "Polea", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "polea_straight_bar_pullover"),
+    EjercicioEntity(nombre = "Doble Mancuerna Banco inclinado Prono Remo", grupo_muscular = "Espalda", equipamiento = "Mancuerna", descripcion = "Con el torso inclinado o apoyado, tira del peso hacia tu abdomen contrayendo la espalda y controlando la bajada al estirar los brazos.", imagen = "doble_mancuerna_banco_inclinado_prono_remo"),
+    EjercicioEntity(nombre = "Barra Pendlay Remo", grupo_muscular = "Espalda", equipamiento = "Barra", descripcion = "Con el torso inclinado o apoyado, tira del peso hacia tu abdomen contrayendo la espalda y controlando la bajada al estirar los brazos.", imagen = "barra_pendlay_remo"),
+    EjercicioEntity(nombre = "Barra Bent Over Remo", grupo_muscular = "Espalda", equipamiento = "Barra", descripcion = "Con el torso inclinado o apoyado, tira del peso hacia tu abdomen contrayendo la espalda y controlando la bajada al estirar los brazos.", imagen = "barra_beent_over_remo"),
+    EjercicioEntity(nombre = "Doble Mancuerna Prono Remo", grupo_muscular = "Espalda", equipamiento = "Mancuerna", descripcion = "Con el torso inclinado o apoyado, tira del peso hacia tu abdomen contrayendo la espalda y controlando la bajada al estirar los brazos.", imagen = "doble_mancuerna_prono_remo"),
+    EjercicioEntity(nombre = "Barra Conventional Peso muerto", grupo_muscular = "Espalda", equipamiento = "Barra", descripcion = "Manteniendo la espalda neutra, flexiona la cadera para bajar el peso a lo largo de las piernas. Vuelve a extender la cadera para subir y aprieta glúteos.", imagen = "barra_convetional_peso_muerto"),
+    EjercicioEntity(nombre = "Barra Sumo Peso muerto", grupo_muscular = "Espalda", equipamiento = "Barra", descripcion = "Manteniendo la espalda neutra, flexiona la cadera para bajar el peso a lo largo de las piernas. Vuelve a extender la cadera para subir y aprieta glúteos.", imagen = "barra_sumo_peso_muerto"),
+    EjercicioEntity(nombre = "Barra Good Morning", grupo_muscular = "Espalda", equipamiento = "Barra", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "barra_good_morning"),
+    EjercicioEntity(nombre = "Barra Inversa Grip Bent Over Remo", grupo_muscular = "Espalda", equipamiento = "Barra", descripcion = "Con el torso inclinado o apoyado, tira del peso hacia tu abdomen contrayendo la espalda y controlando la bajada al estirar los brazos.", imagen = "barra_inversa_grip_bent_over_remo"),
+    EjercicioEntity(nombre = "Doble Mancuerna Sentado Good Morning", grupo_muscular = "Espalda", equipamiento = "Mancuerna", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "doble_mancuerna_sentado_good_morning"),
+    EjercicioEntity(nombre = "Doble Mancuerna Renegade Remo", grupo_muscular = "Espalda", equipamiento = "Mancuerna", descripcion = "Con el torso inclinado o apoyado, tira del peso hacia tu abdomen contrayendo la espalda y controlando la bajada al estirar los brazos.", imagen = "doble_mancuerna_renegade_remo"),
+    EjercicioEntity(nombre = "Bar Dominada", grupo_muscular = "Espalda", equipamiento = "Barra de dominadas", descripcion = "Cuélgate con los brazos extendidos. Tira de tu cuerpo hacia arriba hasta pasar la barbilla por encima de la barra y baja de forma controlada.", imagen = "bar_dominada"),
+    EjercicioEntity(nombre = "Bar Scapular Dominada", grupo_muscular = "Espalda", equipamiento = "Barra de dominadas", descripcion = "Cuélgate con los brazos extendidos. Tira de tu cuerpo hacia arriba hasta pasar la barbilla por encima de la barra y baja de forma controlada.", imagen = "bar_scapular_dominada"),
+    EjercicioEntity(nombre = "Polea V Grip Sentado Bajo Remo", grupo_muscular = "Espalda", equipamiento = "Polea", descripcion = "Con el torso inclinado o apoyado, tira del peso hacia tu abdomen contrayendo la espalda y controlando la bajada al estirar los brazos.", imagen = "polea_v_grip_sentado_bajo_remo"),
+    EjercicioEntity(nombre = "Polea Agarre ancho Lat Pulldown", grupo_muscular = "Espalda", equipamiento = "Polea", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "polea_agarre_ancho_lat_pulldown"),
+    EjercicioEntity(nombre = "Polea Inversa Grip Lat Pulldown", grupo_muscular = "Espalda", equipamiento = "Polea", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "polea_inversa_grip_lat_pulldown"),
+    EjercicioEntity(nombre = "Mancuerna Pullover", grupo_muscular = "Espalda", equipamiento = "Mancuerna", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "mancuerna_pullover"),
     // Hombros
-    EjercicioEntity(nombre = "Press militar",           grupo_muscular = "Hombros",   equipamiento = "Barra",      descripcion = "De pie o sentado, empuja la barra por encima de la cabeza.", imagen = "https://smartfit-exercises.s3.amazonaws.com/press_militar.jpg"),
-    EjercicioEntity(nombre = "Elevaciones laterales",   grupo_muscular = "Hombros",   equipamiento = "Mancuernas", descripcion = "Levanta las mancuernas a los lados hasta la altura del hombro.", imagen = "https://smartfit-exercises.s3.amazonaws.com/elevaciones_laterales.jpg"),
-    EjercicioEntity(nombre = "Pájaros",                 grupo_muscular = "Hombros",   equipamiento = "Mancuernas", descripcion = "Inclinado, eleva las mancuernas hacia los lados.", imagen = "https://smartfit-exercises.s3.amazonaws.com/pajaros.jpg"),
-    EjercicioEntity(nombre = "Elevaciones frontales",   grupo_muscular = "Hombros",   equipamiento = "Mancuernas", descripcion = "Levanta las mancuernas al frente hasta la altura del hombro.", imagen = "https://smartfit-exercises.s3.amazonaws.com/elevaciones_frontales.jpg"),
+    EjercicioEntity(nombre = "Polea Face Pull", grupo_muscular = "Hombros", equipamiento = "Polea", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "polea_face_pull"),
+    EjercicioEntity(nombre = "Polea Sentado Face Pull", grupo_muscular = "Hombros", equipamiento = "Polea", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "polea_sentado_face_pull"),
+    EjercicioEntity(nombre = "Barra Por encima de la cabeza Press", grupo_muscular = "Hombros", equipamiento = "Barra", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "barra_por_encima_de_la_cabeza_press"),
+    EjercicioEntity(nombre = "Barra Push Press", grupo_muscular = "Hombros", equipamiento = "Barra", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "barra_push_press"),
+    EjercicioEntity(nombre = "Barra Elevación frontal", grupo_muscular = "Hombros", equipamiento = "Barra", descripcion = "Eleva el peso hacia adelante con los brazos casi rectos hasta la altura de los ojos y baja de forma controlada.", imagen = "barra_elevacion_frontal"),
+    EjercicioEntity(nombre = "Doble Mancuerna Push Press", grupo_muscular = "Hombros", equipamiento = "Mancuerna", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "doble_mancuerna_push_press"),
+    EjercicioEntity(nombre = "Doble Mancuerna Elevación Lateral", grupo_muscular = "Hombros", equipamiento = "Mancuerna", descripcion = "Con una ligera flexión de codos, eleva los brazos hacia los lados hasta la altura de los hombros y baja controlando el peso.", imagen = "doble_mancuerna_elevacion_lateral"),
+    EjercicioEntity(nombre = "Doble Mancuerna Sentado Elevación Lateral", grupo_muscular = "Hombros", equipamiento = "Mancuerna", descripcion = "Con una ligera flexión de codos, eleva los brazos hacia los lados hasta la altura de los hombros y baja controlando el peso.", imagen = "doble_mancuerna_sentado_elevacion_lateral"),
+    EjercicioEntity(nombre = "Doble Mancuerna Sentado Por encima de la cabeza Press", grupo_muscular = "Hombros", equipamiento = "Mancuerna", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "doble_mancuerna_sentado_por_encima_de_la_cabeza_extensio"),
+    EjercicioEntity(nombre = "Doble Mancuerna Por encima de la cabeza Press", grupo_muscular = "Hombros", equipamiento = "Mancuerna", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "doble_mancuerna_por_encima_de_la_cabeza_press"),
+    EjercicioEntity(nombre = "Doble Mancuerna De pie Scaption", grupo_muscular = "Hombros", equipamiento = "Mancuerna", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "doble_mancuerna_de_pie_scaption"),
+    EjercicioEntity(nombre = "Doble Mancuerna Arnold Press", grupo_muscular = "Hombros", equipamiento = "Mancuerna", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "doble_mancuerna_arnold_press"),
+    // Trapecio
+    EjercicioEntity(nombre = "Barra Shrug", grupo_muscular = "Trapecio", equipamiento = "Barra", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "barra_shrug"),
+    EjercicioEntity(nombre = "Doble Mancuerna Shrug", grupo_muscular = "Trapecio", equipamiento = "Mancuerna", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "doble_mancuerna_shrug"),
     // Bíceps
-    EjercicioEntity(nombre = "Curl de bíceps",          grupo_muscular = "Bíceps",    equipamiento = "Barra",      descripcion = "De pie, flexiona los codos para subir la barra.", imagen = "https://smartfit-exercises.s3.amazonaws.com/curl_biceps.jpg"),
-    EjercicioEntity(nombre = "Curl con mancuernas",     grupo_muscular = "Bíceps",    equipamiento = "Mancuernas", descripcion = "Alterna o simultáneo, flexiona los codos con mancuernas.", imagen = "https://smartfit-exercises.s3.amazonaws.com/curl_mancuernas.jpg"),
-    EjercicioEntity(nombre = "Curl martillo",           grupo_muscular = "Bíceps",    equipamiento = "Mancuernas", descripcion = "Agarre neutro, flexiona los codos hacia los hombros.", imagen = "https://smartfit-exercises.s3.amazonaws.com/curl_martillo.jpg"),
-    EjercicioEntity(nombre = "Curl en polea baja",      grupo_muscular = "Bíceps",    equipamiento = "Máquina",    descripcion = "De pie frente a la polea baja, tira hacia arriba.", imagen = "https://smartfit-exercises.s3.amazonaws.com/curl_polea.jpg"),
+    EjercicioEntity(nombre = "Polea Supino Curl de bíceps", grupo_muscular = "Bíceps", equipamiento = "Polea", descripcion = "Manteniendo los codos pegados al costado del cuerpo, flexiona los brazos para subir el peso hacia los hombros y baja controlando el movimiento.", imagen = "polea_supino_curl_de_biceps"),
+    EjercicioEntity(nombre = "Barra Curl de bíceps", grupo_muscular = "Bíceps", equipamiento = "Barra", descripcion = "Manteniendo los codos pegados al costado del cuerpo, flexiona los brazos para subir el peso hacia los hombros y baja controlando el movimiento.", imagen = "barra_curl_de_biceps"),
+    EjercicioEntity(nombre = "Bar Dominada supina", grupo_muscular = "Bíceps", equipamiento = "Barra de dominadas", descripcion = "Cuélgate con los brazos extendidos. Tira de tu cuerpo hacia arriba hasta pasar la barbilla por encima de la barra y baja de forma controlada.", imagen = "bar_dominada_supina"),
+    EjercicioEntity(nombre = "Alterno Doble Mancuerna Curl de bíceps", grupo_muscular = "Bíceps", equipamiento = "Mancuerna", descripcion = "Manteniendo los codos pegados al costado del cuerpo, flexiona los brazos para subir el peso hacia los hombros y baja controlando el movimiento.", imagen = "alterno_doble_mancuerna_curl_de_biceps"),
+    EjercicioEntity(nombre = "Alterno Doble Mancuerna Hammer Curl", grupo_muscular = "Bíceps", equipamiento = "Mancuerna", descripcion = "Manteniendo los codos pegados al costado del cuerpo, flexiona los brazos para subir el peso hacia los hombros y baja controlando el movimiento.", imagen = "alterno_doble_mancuerna_hammer_curl"),
+    EjercicioEntity(nombre = "A un brazo Mancuerna Banco inclinado Preacher Curl", grupo_muscular = "Bíceps", equipamiento = "Mancuerna", descripcion = "Manteniendo los codos pegados al costado del cuerpo, flexiona los brazos para subir el peso hacia los hombros y baja controlando el movimiento.", imagen = "a_un_brazo_mancuerna_banco_inclinado_preacher_curl"),
+    EjercicioEntity(nombre = "Doble Mancuerna Hammer Curl", grupo_muscular = "Bíceps", equipamiento = "Mancuerna", descripcion = "Manteniendo los codos pegados al costado del cuerpo, flexiona los brazos para subir el peso hacia los hombros y baja controlando el movimiento.", imagen = "doble_mancuerna_hammer_curl"),
     // Tríceps
-    EjercicioEntity(nombre = "Press francés",           grupo_muscular = "Tríceps",   equipamiento = "Barra",      descripcion = "Tumbado, baja la barra a la frente y extiende los codos.", imagen = "https://smartfit-exercises.s3.amazonaws.com/press_frances.jpg"),
-    EjercicioEntity(nombre = "Extensiones en polea",    grupo_muscular = "Tríceps",   equipamiento = "Máquina",    descripcion = "De pie, empuja la cuerda hacia abajo extendiendo los codos.", imagen = "https://smartfit-exercises.s3.amazonaws.com/extensiones_polea.jpg"),
-    EjercicioEntity(nombre = "Fondos en banco",         grupo_muscular = "Tríceps",   equipamiento = "Peso corporal", descripcion = "Manos en banco, baja y sube el cuerpo flexionando los codos.", imagen = "https://smartfit-exercises.s3.amazonaws.com/fondos_banco.jpg"),
-    EjercicioEntity(nombre = "Patada de tríceps",       grupo_muscular = "Tríceps",   equipamiento = "Mancuernas", descripcion = "Inclinado, extiende el codo hacia atrás con mancuerna.", imagen = "https://smartfit-exercises.s3.amazonaws.com/patada_triceps.jpg"),
-    // Piernas
-    EjercicioEntity(nombre = "Sentadilla",              grupo_muscular = "Piernas",   equipamiento = "Barra",      descripcion = "Con barra en trapecios, baja hasta que los muslos queden paralelos al suelo.", imagen = "https://smartfit-exercises.s3.amazonaws.com/sentadilla.jpg"),
-    EjercicioEntity(nombre = "Prensa de piernas",       grupo_muscular = "Piernas",   equipamiento = "Máquina",    descripcion = "Sentado en la máquina, empuja la plataforma con los pies.", imagen = "https://smartfit-exercises.s3.amazonaws.com/prensa.jpg"),
-    EjercicioEntity(nombre = "Extensión de cuádriceps", grupo_muscular = "Piernas",   equipamiento = "Máquina",    descripcion = "Sentado, extiende las rodillas contra la resistencia.", imagen = "https://smartfit-exercises.s3.amazonaws.com/extension_cuad.jpg"),
-    EjercicioEntity(nombre = "Curl femoral",            grupo_muscular = "Piernas",   equipamiento = "Máquina",    descripcion = "Tumbado boca abajo, flexiona las rodillas contra la resistencia.", imagen = "https://smartfit-exercises.s3.amazonaws.com/curl_femoral.jpg"),
-    EjercicioEntity(nombre = "Zancadas",                grupo_muscular = "Piernas",   equipamiento = "Mancuernas", descripcion = "Da un paso adelante y baja la rodilla trasera al suelo.", imagen = "https://smartfit-exercises.s3.amazonaws.com/zancadas.jpg"),
-    EjercicioEntity(nombre = "Elevación de talones",    grupo_muscular = "Piernas",   equipamiento = "Máquina",    descripcion = "De pie, eleva los talones para trabajar los gemelos.", imagen = "https://smartfit-exercises.s3.amazonaws.com/elevacion_talones.jpg"),
-    EjercicioEntity(nombre = "Sentadilla búlgara",      grupo_muscular = "Piernas",   equipamiento = "Mancuernas", descripcion = "Pie trasero en banco, baja el cuerpo con el pie delantero.", imagen = "https://smartfit-exercises.s3.amazonaws.com/sentadilla_bulgara.jpg"),
-    // Abdomen
-    EjercicioEntity(nombre = "Crunch abdominal",        grupo_muscular = "Abdomen",   equipamiento = "Peso corporal", descripcion = "Tumbado, eleva el torso hacia las rodillas.", imagen = "https://smartfit-exercises.s3.amazonaws.com/crunch.jpg"),
-    EjercicioEntity(nombre = "Plancha",                 grupo_muscular = "Abdomen",   equipamiento = "Peso corporal", descripcion = "Apoyado en antebrazos y pies, mantén el cuerpo recto.", imagen = "https://smartfit-exercises.s3.amazonaws.com/plancha.jpg"),
-    EjercicioEntity(nombre = "Elevación de piernas",    grupo_muscular = "Abdomen",   equipamiento = "Peso corporal", descripcion = "Tumbado, sube las piernas rectas hasta 90 grados.", imagen = "https://smartfit-exercises.s3.amazonaws.com/elevacion_piernas.jpg"),
-    EjercicioEntity(nombre = "Rueda abdominal",         grupo_muscular = "Abdomen",   equipamiento = "Accesorios", descripcion = "Arrodillado, rueda hacia adelante y vuelve.", imagen = "https://smartfit-exercises.s3.amazonaws.com/rueda_abdominal.jpg"),
-    EjercicioEntity(nombre = "Crunch en polea",         grupo_muscular = "Abdomen",   equipamiento = "Máquina",    descripcion = "De rodillas, tira la cuerda hacia abajo flexionando el torso.", imagen = "https://smartfit-exercises.s3.amazonaws.com/crunch_polea.jpg"),
-    EjercicioEntity(nombre = "Mountain climbers",       grupo_muscular = "Abdomen",   equipamiento = "Peso corporal", descripcion = "En posición de plancha, alterna rodillas al pecho.", imagen = "https://smartfit-exercises.s3.amazonaws.com/mountain_climbers.jpg")
+    EjercicioEntity(nombre = "Peso corporal Diamond Flexión", grupo_muscular = "Tríceps", equipamiento = "Peso corporal", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "peso_corporal_diamond_flexion"),
+    EjercicioEntity(nombre = "Polea Cuerda Por encima de la cabeza Extensión de tríceps", grupo_muscular = "Tríceps", equipamiento = "Polea", descripcion = "Con los codos fijos, extiende los brazos por completo para contraer los tríceps y vuelve despacio a la posición inicial.", imagen = "polea_cuerda_por_encima_de_la_cabeza_extension_de_tri"),
+    EjercicioEntity(nombre = "Paralela Agarre estrecho Flexión", grupo_muscular = "Tríceps", equipamiento = "Barras paralelas", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "paralela_agarre_estrecho_flexion"),
+    EjercicioEntity(nombre = "Barra Agarre estrecho Press de banca", grupo_muscular = "Tríceps", equipamiento = "Barra", descripcion = "Túmbate en el banco, baja el peso de forma controlada hasta el pecho y empuja con fuerza hasta extender los brazos.", imagen = "barra_agarre_estrecho_press_de_banca"),
+    EjercicioEntity(nombre = "Superband Assisted Dips", grupo_muscular = "Tríceps", equipamiento = "Superband", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "superband_assisted_dips"),
+    EjercicioEntity(nombre = "Doble Mancuerna Tríceps Kickback", grupo_muscular = "Tríceps", equipamiento = "Mancuerna", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "doble_mancuerna_triceps_kickback"),
+    EjercicioEntity(nombre = "Mancuerna Sentado Por encima de la cabeza Extensión de tríceps", grupo_muscular = "Tríceps", equipamiento = "Mancuerna", descripcion = "Con los codos fijos, extiende los brazos por completo para contraer los tríceps y vuelve despacio a la posición inicial.", imagen = "mancuerna_sentado_por_encima_de_la_cabeza_extensio"),
+    EjercicioEntity(nombre = "Barra Sentado Por encima de la cabeza Extensión de tríceps", grupo_muscular = "Tríceps", equipamiento = "Barra", descripcion = "Con los codos fijos, extiende los brazos por completo para contraer los tríceps y vuelve despacio a la posición inicial.", imagen = "barra_sentado_por_encima_de_la_cabeza_extension_de_tri"),
+    EjercicioEntity(nombre = "Peso corporal Dips", grupo_muscular = "Tríceps", equipamiento = "Peso corporal", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "peso_corporal_dips"),
+    EjercicioEntity(nombre = "Barra Skull Crusher", grupo_muscular = "Tríceps", equipamiento = "Barra", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "barra_skull_crusher"),
+    // Cuádriceps
+    EjercicioEntity(nombre = "Barra Thruster", grupo_muscular = "Cuádriceps", equipamiento = "Barra", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "barra_thruster"),
+    EjercicioEntity(nombre = "Peso corporal Sentadilla", grupo_muscular = "Cuádriceps", equipamiento = "Peso corporal", descripcion = "Flexiona las rodillas y baja las caderas manteniendo la espalda recta y el pecho arriba. Empuja con las piernas para volver a subir.", imagen = "peso_corporal_sentadilla"),
+    EjercicioEntity(nombre = "Mancuerna Goblet Sentadilla", grupo_muscular = "Cuádriceps", equipamiento = "Mancuerna", descripcion = "Flexiona las rodillas y baja las caderas manteniendo la espalda recta y el pecho arriba. Empuja con las piernas para volver a subir.", imagen = "mancuerna_goblet_sentadilla"),
+    EjercicioEntity(nombre = "Barra Posición frontal Sentadilla", grupo_muscular = "Cuádriceps", equipamiento = "Barra", descripcion = "Flexiona las rodillas y baja las caderas manteniendo la espalda recta y el pecho arriba. Empuja con las piernas para volver a subir.", imagen = "barra_posicion_frontal_sentadilla"),
+    EjercicioEntity(nombre = "Barra Alto Bar Espalda Sentadilla", grupo_muscular = "Cuádriceps", equipamiento = "Barra", descripcion = "Flexiona las rodillas y baja las caderas manteniendo la espalda recta y el pecho arriba. Empuja con las piernas para volver a subir.", imagen = "barra_alto_bar_espalda_sentadilla"),
+    EjercicioEntity(nombre = "Barra Bajo Bar Espalda Sentadilla", grupo_muscular = "Cuádriceps", equipamiento = "Barra", descripcion = "Flexiona las rodillas y baja las caderas manteniendo la espalda recta y el pecho arriba. Empuja con las piernas para volver a subir.", imagen = "barra_bajo_bar_espalda_sentadilla"),
+    EjercicioEntity(nombre = "Doble Mancuerna Estilo maleta Sentadilla búlgara", grupo_muscular = "Cuádriceps", equipamiento = "Mancuerna", descripcion = "Flexiona las rodillas y baja las caderas manteniendo la espalda recta y el pecho arriba. Empuja con las piernas para volver a subir.", imagen = "doble_mancuerna_estilo_maleta_sentadilla_bulgara"),
+    EjercicioEntity(nombre = "Doble Mancuerna Estilo maleta Subida al cajón", grupo_muscular = "Cuádriceps", equipamiento = "Mancuerna", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "doble_mancuerna_estilo_maleta_subida_al_cajon"),
+    EjercicioEntity(nombre = "Doble Mancuerna Estilo maleta Alterno Hacia adelante Zancada", grupo_muscular = "Cuádriceps", equipamiento = "Mancuerna", descripcion = "Da un paso y flexiona ambas rodillas hasta que la pierna trasera casi toque el suelo. Empuja para volver a la posición inicial.", imagen = "doble_mancuerna_estilo_maleta_alterno_hacia_adelante"),
+    EjercicioEntity(nombre = "Doble Mancuerna Estilo maleta Alterno Inversa Zancada", grupo_muscular = "Cuádriceps", equipamiento = "Mancuerna", descripcion = "Da un paso y flexiona ambas rodillas hasta que la pierna trasera casi toque el suelo. Empuja para volver a la posición inicial.", imagen = "doble_mancuerna_estilo_maleta_alterno_inversa_zancada"),
+    EjercicioEntity(nombre = "Barra Posición trasera Caminando Zancada", grupo_muscular = "Cuádriceps", equipamiento = "Barra", descripcion = "Da un paso y flexiona ambas rodillas hasta que la pierna trasera casi toque el suelo. Empuja para volver a la posición inicial.", imagen = "barra_posicion_trasera_caminando_zancada"),
+    EjercicioEntity(nombre = "Barra Posición trasera Subida al cajón", grupo_muscular = "Cuádriceps", equipamiento = "Barra", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "barra_posicion_trasera_subida_al_cajon"),
+    // Isquiosurales
+    EjercicioEntity(nombre = "Doble Mancuerna Romanian Peso muerto", grupo_muscular = "Isquiosurales", equipamiento = "Mancuerna", descripcion = "Manteniendo la espalda neutra, flexiona la cadera para bajar el peso a lo largo de las piernas. Vuelve a extender la cadera para subir y aprieta glúteos.", imagen = "doble_mancuerna_romanian_peso_muerto"),
+    EjercicioEntity(nombre = "Barra Romanian Peso muerto", grupo_muscular = "Isquiosurales", equipamiento = "Barra", descripcion = "Manteniendo la espalda neutra, flexiona la cadera para bajar el peso a lo largo de las piernas. Vuelve a extender la cadera para subir y aprieta glúteos.", imagen = "barra_romanian_peso_muerto"),
+    EjercicioEntity(nombre = "Barra Stiff Legged Peso muerto", grupo_muscular = "Isquiosurales", equipamiento = "Barra", descripcion = "Manteniendo la espalda neutra, flexiona la cadera para bajar el peso a lo largo de las piernas. Vuelve a extender la cadera para subir y aprieta glúteos.", imagen = "barra_stiff_legged_peso_muerto"),
+    EjercicioEntity(nombre = "Barra A una pierna Romanian Peso muerto", grupo_muscular = "Isquiosurales", equipamiento = "Barra", descripcion = "Manteniendo la espalda neutra, flexiona la cadera para bajar el peso a lo largo de las piernas. Vuelve a extender la cadera para subir y aprieta glúteos.", imagen = "barra_a_una_pierna_romanian_peso_muerto"),
+    // Glúteos
+    EjercicioEntity(nombre = "Peso corporal Puente de glúteo", grupo_muscular = "Glúteos", equipamiento = "Peso corporal", descripcion = "Tumbado boca arriba con las rodillas flexionadas, empuja con los talones para elevar la cadera apretando los glúteos al máximo al subir.", imagen = "peso_corporal_puente_de_gluteo"),
+    EjercicioEntity(nombre = "Mancuerna Puente de glúteo", grupo_muscular = "Glúteos", equipamiento = "Mancuerna", descripcion = "Tumbado boca arriba con las rodillas flexionadas, empuja con los talones para elevar la cadera apretando los glúteos al máximo al subir.", imagen = "mancuerna_puente_de_gluteo"),
+    EjercicioEntity(nombre = "Barra Cadera Thrust", grupo_muscular = "Glúteos", equipamiento = "Barra", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "barra_cadera_thrust"),
+    EjercicioEntity(nombre = "Barra A una pierna Cadera Thrust", grupo_muscular = "Glúteos", equipamiento = "Barra", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "barra_a_una_pierna_cadera_thrust"),
+    EjercicioEntity(nombre = "Peso corporal Cadera Thrust", grupo_muscular = "Glúteos", equipamiento = "Peso corporal", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "peso_corporal_cadera_thrust"),
+    EjercicioEntity(nombre = "Mancuerna Cadera Thrust", grupo_muscular = "Glúteos", equipamiento = "Mancuerna", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "mancuerna_cadera_thrust"),
+    // Abdominales
+    EjercicioEntity(nombre = "Peso corporal Bird Dog", grupo_muscular = "Abdominales", equipamiento = "Peso corporal", descripcion = "Mantén la columna neutra y el abdomen tenso. Extiende las extremidades opuestas de forma lenta y controlada sin perder la postura.", imagen = "peso_corporal_bird_dog"),
+    EjercicioEntity(nombre = "Pelota de estabilidad Giro ruso", grupo_muscular = "Abdominales", equipamiento = "Fitball", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "pelota_de_estabilidad_giro_ruso"),
+    EjercicioEntity(nombre = "Paralela Escalador", grupo_muscular = "Abdominales", equipamiento = "Barras paralelas", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "paralela_escalador"),
+    EjercicioEntity(nombre = "Peso corporal Bicho muerto", grupo_muscular = "Abdominales", equipamiento = "Peso corporal", descripcion = "Mantén la columna neutra y el abdomen tenso. Extiende las extremidades opuestas de forma lenta y controlada sin perder la postura.", imagen = "peso_corporal_bicho_muerto"),
+    EjercicioEntity(nombre = "Peso corporal Kneeling Forearm Plancha", grupo_muscular = "Abdominales", equipamiento = "Peso corporal", descripcion = "Apóyate en los antebrazos y las puntas de los pies. Mantén el cuerpo en línea recta contrayendo fuerte el abdomen y los glúteos.", imagen = "peso_corporal_kneeling_forearm_plancha"),
+    EjercicioEntity(nombre = "Ab Wheel Kneeling Rollout", grupo_muscular = "Abdominales", equipamiento = "Ab Wheel", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "ab_wheel_kneeling_rollout"),
+    EjercicioEntity(nombre = "Polea Kneeling Encogimiento", grupo_muscular = "Abdominales", equipamiento = "Polea", descripcion = "Tumbado boca arriba, contrae el abdomen para elevar ligeramente los hombros del suelo sin tirar del cuello, y vuelve a bajar despacio.", imagen = "polea_kneeling_encogimiento"),
+    EjercicioEntity(nombre = "Paralela L Sit", grupo_muscular = "Abdominales", equipamiento = "Barras paralelas", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "paralela_l_sit"),
+    EjercicioEntity(nombre = "Peso corporal De pie Walkout Plancha", grupo_muscular = "Abdominales", equipamiento = "Peso corporal", descripcion = "Apóyate en los antebrazos y las puntas de los pies. Mantén el cuerpo en línea recta contrayendo fuerte el abdomen y los glúteos.", imagen = "peso_corporal_de_pie_walkout_plancha"),
+    EjercicioEntity(nombre = "Peso corporal Plancha Lateral", grupo_muscular = "Abdominales", equipamiento = "Peso corporal", descripcion = "Apóyate en los antebrazos y las puntas de los pies. Mantén el cuerpo en línea recta contrayendo fuerte el abdomen y los glúteos.", imagen = "peso_corporal_plancha_lateral"),
+    EjercicioEntity(nombre = "Bar Inverted Hanging Encogimiento", grupo_muscular = "Abdominales", equipamiento = "Barra de dominadas", descripcion = "Tumbado boca arriba, contrae el abdomen para elevar ligeramente los hombros del suelo sin tirar del cuello, y vuelve a bajar despacio.", imagen = "bar_inverted_hanging_encogimiento"),
+    EjercicioEntity(nombre = "Barra Kneeling Rollout", grupo_muscular = "Abdominales", equipamiento = "Barra", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "barra_kneeling_rollout"),
+    EjercicioEntity(nombre = "Bar Hanging Rodilla Elevación", grupo_muscular = "Abdominales", equipamiento = "Barra de dominadas", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "bar_hanging_rodilla_elevacion"),
+    EjercicioEntity(nombre = "Bar Hanging Rodillas a Codos", grupo_muscular = "Abdominales", equipamiento = "Barra de dominadas", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "bar_hanging_rodillas_a_codos"),
+    EjercicioEntity(nombre = "Bar Hanging Pierna Elevación", grupo_muscular = "Abdominales", equipamiento = "Barra de dominadas", descripcion = "Agarra el equipamiento de forma segura. Realiza el movimiento en todo su rango de recorrido de forma controlada, manteniendo el core firme y sin dar tirones.", imagen = "bar_hanging_pierna_elevacion"),
+    // Gemelos
+    EjercicioEntity(nombre = "Doble Mancuerna Estilo maleta Elevación de gemelos", grupo_muscular = "Gemelos", equipamiento = "Mancuerna", descripcion = "Eleva los talones apoyándote en la punta de los pies para contraer los gemelos. Aguanta un segundo arriba y baja estirando por completo.", imagen = "doble_mancuerna_estilo_maleta_elevacion_de_gemelos"),
+    EjercicioEntity(nombre = "Doble Mancuerna Sentado Elevación de gemelos", grupo_muscular = "Gemelos", equipamiento = "Mancuerna", descripcion = "Eleva los talones apoyándote en la punta de los pies para contraer los gemelos. Aguanta un segundo arriba y baja estirando por completo.", imagen = "doble_mancuerna_sentado_elevacion_de_gemelos"),
+    EjercicioEntity(nombre = "Barra Sentado Elevación de gemelos", grupo_muscular = "Gemelos", equipamiento = "Barra", descripcion = "Eleva los talones apoyándote en la punta de los pies para contraer los gemelos. Aguanta un segundo arriba y baja estirando por completo.", imagen = "barra_sentado_elevacion_de_gemelos"),
+    EjercicioEntity(nombre = "Peso corporal Mano Assisted Pies elevados Elevación de gemelos", grupo_muscular = "Gemelos", equipamiento = "Peso corporal", descripcion = "Eleva los talones apoyándote en la punta de los pies para contraer los gemelos. Aguanta un segundo arriba y baja estirando por completo.", imagen = "peso_corporal_mano_assisted_pies_elevados_elevacion_d"),
+    EjercicioEntity(nombre = "Barra Posición trasera Elevación de gemelos", grupo_muscular = "Gemelos", equipamiento = "Barra", descripcion = "Eleva los talones apoyándote en la punta de los pies para contraer los gemelos. Aguanta un segundo arriba y baja estirando por completo.", imagen = "barra_posicion_trasera_elevacion_de_gemelos"),
+    // Antebrazos
+    EjercicioEntity(nombre = "Barra Inversa Grip Curl de bíceps", grupo_muscular = "Antebrazos", equipamiento = "Barra", descripcion = "Manteniendo los codos pegados al costado del cuerpo, flexiona los brazos para subir el peso hacia los hombros y baja controlando el movimiento.", imagen = "barra_inversa_grip_curl_de_biceps"),
 )
 
+// ── SEED COMIDAS ──────────────────────────────────────────────────────────
+// Datos nutricionales por 100g — fuente: USDA FoodData Central
 private fun seedComidas(): List<ComidaEntity> = listOf(
     // Proteínas
-    ComidaEntity(nombre = "Pechuga de pollo",       calorias_100g = 165, proteinas_100g = 31, carbohidratos_100g = 0,  grasas_100g = 4,  imagen = "https://smartfit-foods.s3.amazonaws.com/pollo.jpg"),
-    ComidaEntity(nombre = "Atún en lata",           calorias_100g = 116, proteinas_100g = 26, carbohidratos_100g = 0,  grasas_100g = 1,  imagen = "https://smartfit-foods.s3.amazonaws.com/atun.jpg"),
-    ComidaEntity(nombre = "Salmón",                 calorias_100g = 208, proteinas_100g = 20, carbohidratos_100g = 0,  grasas_100g = 13, imagen = "https://smartfit-foods.s3.amazonaws.com/salmon.jpg"),
-    ComidaEntity(nombre = "Huevos",                 calorias_100g = 155, proteinas_100g = 13, carbohidratos_100g = 1,  grasas_100g = 11, imagen = "https://smartfit-foods.s3.amazonaws.com/huevos.jpg"),
-    ComidaEntity(nombre = "Ternera magra",          calorias_100g = 250, proteinas_100g = 26, carbohidratos_100g = 0,  grasas_100g = 15, imagen = "https://smartfit-foods.s3.amazonaws.com/ternera.jpg"),
-    ComidaEntity(nombre = "Claras de huevo",        calorias_100g = 52,  proteinas_100g = 11, carbohidratos_100g = 1,  grasas_100g = 0,  imagen = "https://smartfit-foods.s3.amazonaws.com/claras.jpg"),
-    ComidaEntity(nombre = "Pavo en lonchas",        calorias_100g = 109, proteinas_100g = 22, carbohidratos_100g = 1,  grasas_100g = 2,  imagen = "https://smartfit-foods.s3.amazonaws.com/pavo.jpg"),
-    ComidaEntity(nombre = "Queso cottage",          calorias_100g = 98,  proteinas_100g = 11, carbohidratos_100g = 3,  grasas_100g = 4,  imagen = "https://smartfit-foods.s3.amazonaws.com/cottage.jpg"),
-    ComidaEntity(nombre = "Greek yogurt 0%",        calorias_100g = 59,  proteinas_100g = 10, carbohidratos_100g = 4,  grasas_100g = 0,  imagen = "https://smartfit-foods.s3.amazonaws.com/greek_yogurt.jpg"),
-    ComidaEntity(nombre = "Proteína whey",          calorias_100g = 380, proteinas_100g = 75, carbohidratos_100g = 8,  grasas_100g = 5,  imagen = "https://smartfit-foods.s3.amazonaws.com/whey.jpg"),
+    ComidaEntity(nombre = "Pollo a la plancha", calorias_100g = 165, proteinas_100g = 31, carbohidratos_100g = 0, grasas_100g = 4),
+    ComidaEntity(nombre = "Salmón al horno", calorias_100g = 208, proteinas_100g = 20, carbohidratos_100g = 0, grasas_100g = 13),
+    ComidaEntity(nombre = "Atún en lata", calorias_100g = 116, proteinas_100g = 26, carbohidratos_100g = 0, grasas_100g = 1),
+    ComidaEntity(nombre = "Ternera magra", calorias_100g = 135, proteinas_100g = 21, carbohidratos_100g = 0, grasas_100g = 5),
+    ComidaEntity(nombre = "Pechuga de pavo", calorias_100g = 135, proteinas_100g = 30, carbohidratos_100g = 0, grasas_100g = 1),
+    ComidaEntity(nombre = "Huevos enteros", calorias_100g = 143, proteinas_100g = 13, carbohidratos_100g = 1, grasas_100g = 10),
+    ComidaEntity(nombre = "Claras de huevo", calorias_100g = 52, proteinas_100g = 11, carbohidratos_100g = 1, grasas_100g = 0),
+    ComidaEntity(nombre = "Queso cottage", calorias_100g = 98, proteinas_100g = 11, carbohidratos_100g = 3, grasas_100g = 4),
+    ComidaEntity(nombre = "Yogur griego natural", calorias_100g = 59, proteinas_100g = 10, carbohidratos_100g = 4, grasas_100g = 0),
+    ComidaEntity(nombre = "Tofu firme", calorias_100g = 76, proteinas_100g = 8, carbohidratos_100g = 2, grasas_100g = 4),
     // Carbohidratos
-    ComidaEntity(nombre = "Arroz blanco",           calorias_100g = 130, proteinas_100g = 3,  carbohidratos_100g = 28, grasas_100g = 0,  imagen = "https://smartfit-foods.s3.amazonaws.com/arroz.jpg"),
-    ComidaEntity(nombre = "Avena",                  calorias_100g = 389, proteinas_100g = 17, carbohidratos_100g = 66, grasas_100g = 7,  imagen = "https://smartfit-foods.s3.amazonaws.com/avena.jpg"),
-    ComidaEntity(nombre = "Pasta integral",         calorias_100g = 150, proteinas_100g = 6,  carbohidratos_100g = 29, grasas_100g = 1,  imagen = "https://smartfit-foods.s3.amazonaws.com/pasta.jpg"),
-    ComidaEntity(nombre = "Pan integral",           calorias_100g = 247, proteinas_100g = 9,  carbohidratos_100g = 41, grasas_100g = 3,  imagen = "https://smartfit-foods.s3.amazonaws.com/pan.jpg"),
-    ComidaEntity(nombre = "Patata cocida",          calorias_100g = 87,  proteinas_100g = 2,  carbohidratos_100g = 20, grasas_100g = 0,  imagen = "https://smartfit-foods.s3.amazonaws.com/patata.jpg"),
-    ComidaEntity(nombre = "Plátano",                calorias_100g = 89,  proteinas_100g = 1,  carbohidratos_100g = 23, grasas_100g = 0,  imagen = "https://smartfit-foods.s3.amazonaws.com/platano.jpg"),
-    ComidaEntity(nombre = "Batata",                 calorias_100g = 86,  proteinas_100g = 2,  carbohidratos_100g = 20, grasas_100g = 0,  imagen = "https://smartfit-foods.s3.amazonaws.com/batata.jpg"),
-    ComidaEntity(nombre = "Quinoa",                 calorias_100g = 120, proteinas_100g = 4,  carbohidratos_100g = 21, grasas_100g = 2,  imagen = "https://smartfit-foods.s3.amazonaws.com/quinoa.jpg"),
-    ComidaEntity(nombre = "Manzana",                calorias_100g = 52,  proteinas_100g = 0,  carbohidratos_100g = 14, grasas_100g = 0,  imagen = "https://smartfit-foods.s3.amazonaws.com/manzana.jpg"),
+    ComidaEntity(nombre = "Arroz blanco cocido", calorias_100g = 130, proteinas_100g = 3, carbohidratos_100g = 28, grasas_100g = 0),
+    ComidaEntity(nombre = "Arroz integral cocido", calorias_100g = 111, proteinas_100g = 3, carbohidratos_100g = 23, grasas_100g = 1),
+    ComidaEntity(nombre = "Pasta cocida", calorias_100g = 158, proteinas_100g = 6, carbohidratos_100g = 31, grasas_100g = 1),
+    ComidaEntity(nombre = "Avena", calorias_100g = 389, proteinas_100g = 17, carbohidratos_100g = 66, grasas_100g = 7),
+    ComidaEntity(nombre = "Pan integral", calorias_100g = 247, proteinas_100g = 13, carbohidratos_100g = 41, grasas_100g = 4),
+    ComidaEntity(nombre = "Patata cocida", calorias_100g = 87, proteinas_100g = 2, carbohidratos_100g = 20, grasas_100g = 0),
+    ComidaEntity(nombre = "Boniato cocido", calorias_100g = 86, proteinas_100g = 2, carbohidratos_100g = 20, grasas_100g = 0),
+    ComidaEntity(nombre = "Quinoa cocida", calorias_100g = 120, proteinas_100g = 4, carbohidratos_100g = 22, grasas_100g = 2),
+    ComidaEntity(nombre = "Lentejas cocidas", calorias_100g = 116, proteinas_100g = 9, carbohidratos_100g = 20, grasas_100g = 0),
+    ComidaEntity(nombre = "Garbanzos cocidos", calorias_100g = 164, proteinas_100g = 9, carbohidratos_100g = 27, grasas_100g = 3),
+    ComidaEntity(nombre = "Plátano", calorias_100g = 89, proteinas_100g = 1, carbohidratos_100g = 23, grasas_100g = 0),
+    ComidaEntity(nombre = "Manzana", calorias_100g = 52, proteinas_100g = 0, carbohidratos_100g = 14, grasas_100g = 0),
     // Grasas saludables
-    ComidaEntity(nombre = "Aguacate",               calorias_100g = 160, proteinas_100g = 2,  carbohidratos_100g = 9,  grasas_100g = 15, imagen = "https://smartfit-foods.s3.amazonaws.com/aguacate.jpg"),
-    ComidaEntity(nombre = "Almendras",              calorias_100g = 579, proteinas_100g = 21, carbohidratos_100g = 22, grasas_100g = 50, imagen = "https://smartfit-foods.s3.amazonaws.com/almendras.jpg"),
-    ComidaEntity(nombre = "Aceite de oliva",        calorias_100g = 884, proteinas_100g = 0,  carbohidratos_100g = 0,  grasas_100g = 100,imagen = "https://smartfit-foods.s3.amazonaws.com/aceite.jpg"),
-    ComidaEntity(nombre = "Nueces",                 calorias_100g = 654, proteinas_100g = 15, carbohidratos_100g = 14, grasas_100g = 65, imagen = "https://smartfit-foods.s3.amazonaws.com/nueces.jpg"),
-    ComidaEntity(nombre = "Mantequilla de cacahuete",calorias_100g= 588, proteinas_100g = 25, carbohidratos_100g = 20, grasas_100g = 50, imagen = "https://smartfit-foods.s3.amazonaws.com/mantequilla_cacahuete.jpg"),
-    ComidaEntity(nombre = "Semillas de chía",       calorias_100g = 486, proteinas_100g = 17, carbohidratos_100g = 42, grasas_100g = 31, imagen = "https://smartfit-foods.s3.amazonaws.com/chia.jpg"),
+    ComidaEntity(nombre = "Aguacate", calorias_100g = 160, proteinas_100g = 2, carbohidratos_100g = 9, grasas_100g = 15),
+    ComidaEntity(nombre = "Almendras", calorias_100g = 579, proteinas_100g = 21, carbohidratos_100g = 22, grasas_100g = 50),
+    ComidaEntity(nombre = "Nueces", calorias_100g = 654, proteinas_100g = 15, carbohidratos_100g = 14, grasas_100g = 65),
+    ComidaEntity(nombre = "Aceite de oliva virgen extra", calorias_100g = 884, proteinas_100g = 0, carbohidratos_100g = 0, grasas_100g = 100),
+    ComidaEntity(nombre = "Mantequilla de cacahuete natural", calorias_100g = 588, proteinas_100g = 25, carbohidratos_100g = 20, grasas_100g = 50),
+    ComidaEntity(nombre = "Semillas de chía", calorias_100g = 486, proteinas_100g = 17, carbohidratos_100g = 42, grasas_100g = 31),
+    ComidaEntity(nombre = "Aceite de coco", calorias_100g = 862, proteinas_100g = 0, carbohidratos_100g = 0, grasas_100g = 100),
     // Verduras
-    ComidaEntity(nombre = "Brócoli",                calorias_100g = 34,  proteinas_100g = 3,  carbohidratos_100g = 7,  grasas_100g = 0,  imagen = "https://smartfit-foods.s3.amazonaws.com/brocoli.jpg"),
-    ComidaEntity(nombre = "Espinacas",              calorias_100g = 23,  proteinas_100g = 3,  carbohidratos_100g = 4,  grasas_100g = 0,  imagen = "https://smartfit-foods.s3.amazonaws.com/espinacas.jpg"),
-    ComidaEntity(nombre = "Pepino",                 calorias_100g = 16,  proteinas_100g = 1,  carbohidratos_100g = 4,  grasas_100g = 0,  imagen = "https://smartfit-foods.s3.amazonaws.com/pepino.jpg"),
-    ComidaEntity(nombre = "Tomate",                 calorias_100g = 18,  proteinas_100g = 1,  carbohidratos_100g = 4,  grasas_100g = 0,  imagen = "https://smartfit-foods.s3.amazonaws.com/tomate.jpg"),
-    ComidaEntity(nombre = "Lechuga",                calorias_100g = 15,  proteinas_100g = 1,  carbohidratos_100g = 3,  grasas_100g = 0,  imagen = "https://smartfit-foods.s3.amazonaws.com/lechuga.jpg"),
-    // Lácteos y extras
-    ComidaEntity(nombre = "Leche desnatada",        calorias_100g = 34,  proteinas_100g = 3,  carbohidratos_100g = 5,  grasas_100g = 0,  imagen = "https://smartfit-foods.s3.amazonaws.com/leche.jpg"),
-    ComidaEntity(nombre = "Queso fresco 0%",        calorias_100g = 70,  proteinas_100g = 12, carbohidratos_100g = 3,  grasas_100g = 0,  imagen = "https://smartfit-foods.s3.amazonaws.com/queso_fresco.jpg"),
-    ComidaEntity(nombre = "Lentejas cocidas",       calorias_100g = 116, proteinas_100g = 9,  carbohidratos_100g = 20, grasas_100g = 0,  imagen = "https://smartfit-foods.s3.amazonaws.com/lentejas.jpg"),
-    ComidaEntity(nombre = "Garbanzos cocidos",      calorias_100g = 164, proteinas_100g = 9,  carbohidratos_100g = 27, grasas_100g = 3,  imagen = "https://smartfit-foods.s3.amazonaws.com/garbanzos.jpg"),
-    ComidaEntity(nombre = "Arroz integral",         calorias_100g = 111, proteinas_100g = 3,  carbohidratos_100g = 23, grasas_100g = 1,  imagen = "https://smartfit-foods.s3.amazonaws.com/arroz_integral.jpg"),
-    ComidaEntity(nombre = "Edamame",                calorias_100g = 122, proteinas_100g = 11, carbohidratos_100g = 10, grasas_100g = 5,  imagen = "https://smartfit-foods.s3.amazonaws.com/edamame.jpg")
+    ComidaEntity(nombre = "Brócoli", calorias_100g = 34, proteinas_100g = 3, carbohidratos_100g = 7, grasas_100g = 0),
+    ComidaEntity(nombre = "Espinacas", calorias_100g = 23, proteinas_100g = 3, carbohidratos_100g = 4, grasas_100g = 0),
+    ComidaEntity(nombre = "Lechuga romana", calorias_100g = 17, proteinas_100g = 1, carbohidratos_100g = 3, grasas_100g = 0),
+    ComidaEntity(nombre = "Tomate", calorias_100g = 18, proteinas_100g = 1, carbohidratos_100g = 4, grasas_100g = 0),
+    ComidaEntity(nombre = "Pepino", calorias_100g = 15, proteinas_100g = 1, carbohidratos_100g = 4, grasas_100g = 0),
+    // Lácteos
+    ComidaEntity(nombre = "Leche entera", calorias_100g = 61, proteinas_100g = 3, carbohidratos_100g = 5, grasas_100g = 3),
+    ComidaEntity(nombre = "Leche desnatada", calorias_100g = 35, proteinas_100g = 4, carbohidratos_100g = 5, grasas_100g = 0),
 )

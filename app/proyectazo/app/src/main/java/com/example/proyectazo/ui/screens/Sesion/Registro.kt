@@ -19,6 +19,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -38,8 +39,9 @@ fun PantallaRegistro(
     onRegistroExitoso: () -> Unit = {},
     onLoginClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val viewModel: RegisterViewModel = viewModel(
-        factory = RegisterViewModelFactory()
+        factory = RegisterViewModelFactory(context)
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 

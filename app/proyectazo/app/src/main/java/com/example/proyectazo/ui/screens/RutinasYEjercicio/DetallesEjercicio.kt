@@ -11,27 +11,27 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.proyectazo.network.EjercicioResponse
+import com.example.proyectazo.data.local.entity.EjercicioEntity
 import com.example.proyectazo.ui.components.SmartFitTopBar
+import com.example.proyectazo.ui.util.rememberDrawableId
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.example.proyectazo.ui.util.rememberDrawableId
 
-/**
- * Shows the full details of an exercise — image, muscle group, equipment and description.
- * The "Añadir" button is pinned to the bottom bar so it is always visible without scrolling.
- */
 @Composable
 fun DetalleEjercicioScreen(
-    ejercicio: EjercicioResponse,
+    ejercicio: EjercicioEntity,
     onBack: () -> Unit,
-    onAnadir: (EjercicioResponse) -> Unit  // Passes the full object back to AñadirEjercicioScreen
+    onAnadir: (EjercicioEntity) -> Unit
 ) {
     Scaffold(
         topBar = { SmartFitTopBar(titulo = ejercicio.nombre, onBack = onBack) },
         bottomBar = {
-            // Elevated surface ensures the button stands out from the scrollable content below
             Surface(shadowElevation = 8.dp) {
                 Button(
                     onClick = { onAnadir(ejercicio) },
@@ -62,16 +62,15 @@ fun DetalleEjercicioScreen(
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                if (ejercicio.imagen != null) {
-                    // ContentScale.Fit keeps the full exercise image visible without cropping
-                    AsyncImage(
-                        model = ejercicio.imagen,
+                val resId = rememberDrawableId(ejercicio.imagen)
+                if (resId != null) {
+                    Image(
+                        painter = painterResource(id = resId),
                         contentDescription = ejercicio.nombre,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
-                    // Fallback: show the first letter of the exercise name as a placeholder
                     Text(
                         text = ejercicio.nombre.take(1).uppercase(),
                         style = MaterialTheme.typography.displayMedium,
@@ -82,7 +81,6 @@ fun DetalleEjercicioScreen(
 
             Spacer(Modifier.height(20.dp))
 
-            // Chips only rendered if the values are present — nullable fields handled with let
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -95,7 +93,6 @@ fun DetalleEjercicioScreen(
                 }
             }
 
-            // Description only shown if the exercise has one
             ejercicio.descripcion?.let { desc ->
                 Spacer(Modifier.height(20.dp))
                 Text(
@@ -112,7 +109,6 @@ fun DetalleEjercicioScreen(
     }
 }
 
-// Pill-shaped info card showing a label and its value — used for muscle group and equipment
 @Composable
 private fun InfoChip(label: String, valor: String, modifier: Modifier = Modifier) {
     Column(

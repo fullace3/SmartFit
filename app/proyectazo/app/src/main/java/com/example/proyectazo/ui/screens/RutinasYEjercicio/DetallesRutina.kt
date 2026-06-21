@@ -14,12 +14,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.proyectazo.ui.components.SmartFitTopBar
+import com.example.proyectazo.ui.util.rememberDrawableId
 import com.example.proyectazo.ui.viewmodel.RutinaYEjercicio.RutinaConEjercicios
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.example.proyectazo.ui.util.rememberDrawableId
 
 /**
  * Shows the exercises in a routine before the user starts training.
@@ -92,15 +97,25 @@ fun DetallesRutinaScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    AsyncImage(
-                        model = ejercicio.imagen,
-                        contentDescription = ejercicio.nombre,
-                        contentScale = ContentScale.Crop,  // Fills the thumbnail without distortion
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    )
+                    val resId = rememberDrawableId(ejercicio.imagen)
+                    if (resId != null) {
+                        Image(
+                            painter = painterResource(id = resId),
+                            contentDescription = ejercicio.nombre,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        )
+                    }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = ejercicio.nombre,

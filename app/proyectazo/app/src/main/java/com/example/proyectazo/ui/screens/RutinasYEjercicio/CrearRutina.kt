@@ -23,11 +23,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.example.proyectazo.network.EjercicioRutina
-import com.example.proyectazo.network.RetrofitClient
+import androidx.compose.ui.platform.LocalContext
 import com.example.proyectazo.ui.components.SmartFitTopBar
+import com.example.proyectazo.ui.viewmodel.RutinaYEjercicio.EjercicioRutina
 import com.example.proyectazo.ui.viewmodel.RutinaYEjercicio.CrearRutinaUiState
 import com.example.proyectazo.ui.viewmodel.RutinaYEjercicio.RutinaViewModel
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.example.proyectazo.ui.util.rememberDrawableId
 
 /**
  * Screen for creating a new workout routine.
@@ -42,11 +45,9 @@ fun CrearRutinaScreen(
     onNavigateBack: () -> Unit = {},
     onAnadirEjercicio: (rutinaId: Int) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val viewModel: RutinaViewModel = viewModel(
-        factory = RutinaViewModel.Factory(
-            apiService = RetrofitClient.instance,
-            userId = userId
-        )
+        factory = RutinaViewModel.Factory(context = context)
     )
     val uiState by viewModel.uiState.collectAsState()
     // rememberSaveable keeps the name and edit mode across device rotation
@@ -135,11 +136,17 @@ fun CrearRutinaScreen(
                     items(ejercicios, key = { it.id }) { ejercicio ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically) {
-                            AsyncImage(model = ejercicio.imagenUrl,
-                                contentDescription = ejercicio.nombre,
-                                contentScale = ContentScale.Crop,  // Fills the thumbnail without distortion
-                                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp))
+                            val resId = rememberDrawableId(ejercicio.imagenUrl)
+                            if (resId != null) {
+                                Image(painter = painterResource(id = resId),
+                                    contentDescription = ejercicio.nombre,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant))
+                            } else {
+                                Box(modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp))
                                     .background(MaterialTheme.colorScheme.surfaceVariant))
+                            }
                             Spacer(Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(ejercicio.nombre, style = MaterialTheme.typography.bodyMedium,

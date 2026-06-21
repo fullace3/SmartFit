@@ -1,7 +1,7 @@
 package com.example.proyectazo.data.repository
 
 import android.content.Context
-import com.example.proyectazo.data.local.SmartFitDatabase.SmartFitDatabase
+import com.example.proyectazo.data.local.SmartFitDatabase
 import com.example.proyectazo.data.local.entity.*
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter

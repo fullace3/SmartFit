@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -30,9 +31,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.example.proyectazo.ui.util.rememberDrawableId
 import com.example.proyectazo.ui.viewmodel.RutinaYEjercicio.EntrenarViewModel
 import com.example.proyectazo.ui.viewmodel.RutinaYEjercicio.RutinaConEjercicios
 import kotlinx.coroutines.delay
+import androidx.compose.ui.res.painterResource
+import com.example.proyectazo.ui.util.rememberDrawableId
+import androidx.compose.foundation.Image
 
 /**
  * Live workout screen — the most complex screen in the app.
@@ -189,22 +194,32 @@ fun EntrenarScreen(
         ) {
             itemsIndexed(ejercicios) { index, ejercicio ->
                 val isActual = index == ejercicioActualIndex
-                AsyncImage(
-                    model = ejercicio.imagen,
-                    contentDescription = ejercicio.nombre,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        // Active exercise gets a colored border to indicate current position
-                        .border(
-                            if (isActual) 2.dp else 0.dp,
-                            if (isActual) MaterialTheme.colorScheme.primary else Color.Transparent,
-                            RoundedCornerShape(8.dp)
-                        )
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { ejercicioActualIndex = index }
-                )
+                val resIdThumb = rememberDrawableId(ejercicio.imagen)
+                if (resIdThumb != null) {
+                    Image(
+                        painter = painterResource(id = resIdThumb),
+                        contentDescription = ejercicio.nombre,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .border(
+                                if (isActual) 2.dp else 0.dp,
+                                if (isActual) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                RoundedCornerShape(8.dp)
+                            )
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { ejercicioActualIndex = index }
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { ejercicioActualIndex = index }
+                    )
+                }
             }
         }
 
@@ -224,14 +239,23 @@ fun EntrenarScreen(
             }
             item {
                 // ContentScale.Fit here (not Crop) — shows the full exercise image for form reference
-                AsyncImage(
-                    model = ejercicioActual?.imagen,
-                    contentDescription = ejercicioActual?.nombre,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxWidth().height(200.dp).padding(horizontal = 32.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                )
+                val resIdGrande = rememberDrawableId(ejercicioActual?.imagen)
+                if (resIdGrande != null) {
+                    Image(
+                        painter = painterResource(id = resIdGrande),
+                        contentDescription = ejercicioActual?.nombre,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxWidth().height(200.dp).padding(horizontal = 32.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(200.dp).padding(horizontal = 32.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    )
+                }
                 Spacer(Modifier.height(16.dp))
             }
             item {

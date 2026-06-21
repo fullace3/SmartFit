@@ -41,7 +41,6 @@ fun DietaScreen(
     } else if (dietaActiva != null && !mostrarTodas) {
         // Show the active diet view — user can tap "Cambiar" to see all diets
         DietaActivaScreen(
-            dieta = dietaActiva,
             onNueva = onCrearDieta,
             onCambiar = { mostrarTodas = true }
         )

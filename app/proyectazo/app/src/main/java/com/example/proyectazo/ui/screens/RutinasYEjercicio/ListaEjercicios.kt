@@ -28,18 +28,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.proyectazo.R
-import com.example.proyectazo.network.EjercicioResponse
+import com.example.proyectazo.data.local.entity.EjercicioEntity
 import com.example.proyectazo.ui.components.SmartFitTopBar
+import com.example.proyectazo.ui.util.rememberDrawableId
 import com.example.proyectazo.ui.viewmodel.RutinaYEjercicio.AñadirEjercicioUiState
+import com.example.proyectazo.ui.viewmodel.RutinaYEjercicio.FiltroTipo
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.example.proyectazo.ui.util.rememberDrawableId
 
-/**
- * Searchable exercise list with muscle group and equipment filters.
- * Filters open a bottom sheet panel — tapping outside or selecting a value closes it.
- * panelVisible state uses rememberSaveable to survive device rotation.
- */
-enum class FiltroTipo { MUSCULO, EQUIPAMIENTO }
-
-// Maps muscle group names to their local drawable resources for the filter grid
 private val musculoImagenes: Map<String, Int> = mapOf(
     "Abdominales"   to R.drawable.img_003_ms_bajo,
     "Trapecio"      to R.drawable.img_003_atrs_1,
@@ -63,12 +60,10 @@ fun ListaEjerciciosScreen(
     onSearchQueryChange: (String) -> Unit,
     onFiltroTipoChange: (FiltroTipo) -> Unit,
     onFiltroValorChange: (String?) -> Unit,
-    onEjercicioClick: (EjercicioResponse) -> Unit
+    onEjercicioClick: (EjercicioEntity) -> Unit
 ) {
-    // rememberSaveable keeps the panel open across rotation
     var panelVisible by rememberSaveable { mutableStateOf(false) }
 
-    // Close the filter panel automatically once a filter value has been selected
     LaunchedEffect(uiState.filtroValor) {
         if (uiState.filtroValor != null) panelVisible = false
     }
@@ -76,7 +71,6 @@ fun ListaEjerciciosScreen(
     Scaffold(
         topBar = { SmartFitTopBar(titulo = "Añadir ejercicio", onBack = onBack) }
     ) { innerPadding ->
-        // Box allows the filter panel to overlay the list content
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             Column(modifier = Modifier.fillMaxSize()) {
                 OutlinedTextField(
@@ -95,7 +89,6 @@ fun ListaEjerciciosScreen(
                         focusedBorderColor = MaterialTheme.colorScheme.primary)
                 )
 
-                // Two filter chips — selecting one opens the bottom sheet panel
                 Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FiltroTipo.entries.forEach { tipo ->
@@ -104,14 +97,14 @@ fun ListaEjerciciosScreen(
                             selected = selected,
                             onClick = {
                                 onFiltroTipoChange(tipo)
-                                onFiltroValorChange(null)  // Clear previous value when switching filter type
+                                onFiltroValorChange(null)
                                 panelVisible = true
                             },
                             label = {
                                 Text(if (tipo == FiltroTipo.MUSCULO) "Músculo" else "Equipamiento",
                                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
                             },
-                            modifier = Modifier.weight(1f),  // Equal width chips via weight
+                            modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(8.dp)
                         )
                     }
@@ -119,7 +112,6 @@ fun ListaEjerciciosScreen(
 
                 HorizontalDivider(modifier = Modifier.padding(top = 4.dp))
 
-                // Render the correct content based on current state
                 when {
                     uiState.isLoading -> {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -139,7 +131,6 @@ fun ListaEjerciciosScreen(
                         }
                     }
                     else -> {
-                        // Stable key prevents unnecessary recompositions when the list changes
                         LazyColumn(contentPadding = PaddingValues(vertical = 4.dp)) {
                             items(items = uiState.ejerciciosFiltrados, key = { it.id_ejercicio }) { ejercicio ->
                                 EjercicioItem(ejercicio = ejercicio, onClick = { onEjercicioClick(ejercicio) })
@@ -151,14 +142,11 @@ fun ListaEjerciciosScreen(
                 }
             }
 
-            // Bottom sheet filter panel — overlays the list with a semi-transparent scrim
             if (panelVisible) {
-                // Semi-transparent scrim — tapping it closes the panel
                 Box(modifier = Modifier.fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.4f))
                     .clickable { panelVisible = false })
 
-                // Panel slides up from the bottom covering 75% of the screen height
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -168,7 +156,6 @@ fun ListaEjerciciosScreen(
                         .background(MaterialTheme.colorScheme.surface)
                         .padding(top = 8.dp)
                 ) {
-                    // Drag handle — visual cue that the panel can be dismissed
                     Box(modifier = Modifier.width(40.dp).height(4.dp)
                         .clip(RoundedCornerShape(2.dp))
                         .background(MaterialTheme.colorScheme.outlineVariant)
@@ -183,7 +170,6 @@ fun ListaEjerciciosScreen(
 
                     Spacer(Modifier.height(8.dp))
 
-                    // "Clear filter" button — only shown when a filter is already active
                     if (uiState.filtroValor != null) {
                         TextButton(onClick = { onFiltroValorChange(null); panelVisible = false },
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
@@ -193,7 +179,6 @@ fun ListaEjerciciosScreen(
                     }
 
                     if (uiState.filtroTipo == FiltroTipo.MUSCULO) {
-                        // 3-column grid of muscle groups with local drawable images
                         LazyVerticalGrid(columns = GridCells.Fixed(3),
                             contentPadding = PaddingValues(12.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -204,14 +189,12 @@ fun ListaEjerciciosScreen(
                                     nombre = grupo,
                                     selected = uiState.filtroValor == grupo,
                                     onClick = {
-                                        // Tapping the active filter clears it; tapping another selects it
                                         onFiltroValorChange(if (uiState.filtroValor == grupo) null else grupo)
                                         panelVisible = false
                                     })
                             }
                         }
                     } else {
-                        // Equipment grid — uses the first exercise image for that equipment as a preview
                         LazyVerticalGrid(columns = GridCells.Fixed(3),
                             contentPadding = PaddingValues(12.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -237,7 +220,6 @@ fun ListaEjerciciosScreen(
     }
 }
 
-// Muscle group grid item — uses a local drawable image mapped by name
 @Composable
 private fun GrupoMusculoItem(nombre: String, selected: Boolean, onClick: () -> Unit) {
     val drawable = musculoImagenes[nombre]
@@ -256,11 +238,9 @@ private fun GrupoMusculoItem(nombre: String, selected: Boolean, onClick: () -> U
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         if (drawable != null) {
-            // ContentScale.Fit — shows the full muscle diagram without cropping
             Image(painter = painterResource(id = drawable), contentDescription = nombre,
                 modifier = Modifier.size(64.dp).padding(4.dp), contentScale = ContentScale.Fit)
         } else {
-            // Fallback for muscle groups without a mapped drawable
             Box(modifier = Modifier.size(64.dp)
                 .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center) {
@@ -276,7 +256,6 @@ private fun GrupoMusculoItem(nombre: String, selected: Boolean, onClick: () -> U
     }
 }
 
-// Equipment grid item — uses a network image from an exercise that uses that equipment
 @Composable
 private fun GrupoEquipamientoItem(nombre: String, imagenUrl: String?, selected: Boolean, onClick: () -> Unit) {
     Column(
@@ -312,9 +291,8 @@ private fun GrupoEquipamientoItem(nombre: String, imagenUrl: String?, selected: 
     }
 }
 
-// Single exercise row — thumbnail, name and muscle/equipment subtitle
 @Composable
-private fun EjercicioItem(ejercicio: EjercicioResponse, onClick: () -> Unit) {
+private fun EjercicioItem(ejercicio: EjercicioEntity, onClick: () -> Unit) {
     Row(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
         .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -322,11 +300,11 @@ private fun EjercicioItem(ejercicio: EjercicioResponse, onClick: () -> Unit) {
         Box(modifier = Modifier.size(52.dp).clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center) {
-            if (ejercicio.imagen != null) {
-                AsyncImage(model = ejercicio.imagen, contentDescription = ejercicio.nombre,
+            val resId = rememberDrawableId(ejercicio.imagen)
+            if (resId != null) {
+                Image(painter = painterResource(id = resId), contentDescription = ejercicio.nombre,
                     contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
             } else {
-                // Fallback initial letter when no image is available
                 Text(ejercicio.nombre.take(1).uppercase(), style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -335,9 +313,8 @@ private fun EjercicioItem(ejercicio: EjercicioResponse, onClick: () -> Unit) {
             Text(text = ejercicio.nombre,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 color = MaterialTheme.colorScheme.onSurface)
-            // Combines muscle group and equipment as subtitle, falls back to default sets/reps
             val subtitulo = listOfNotNull(ejercicio.grupo_muscular, ejercicio.equipamiento)
-                .joinToString(" · ").ifBlank { "3 series x 10 repeticiones" }
+                .joinToString(" · ").ifBlank { "Ejercicio" }
             Text(text = subtitulo, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

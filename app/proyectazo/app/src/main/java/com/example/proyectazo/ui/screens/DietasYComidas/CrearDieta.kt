@@ -23,8 +23,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.proyectazo.ui.viewmodel.CrearDietaViewModel
-import com.example.proyectazo.ui.viewmodel.AlimentoItem
+import com.example.proyectazo.ui.viewmodel.DietaYComida.CrearDietaViewModel
+import com.example.proyectazo.ui.viewmodel.DietaYComida.AlimentoItem
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
